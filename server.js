@@ -1,12 +1,13 @@
 const express = require('express');
-const cookieParser = require('cookie-parser');
+var cookies = require("cookie-parser");
+const { OAuth2Client } = require('google-auth-library');
+
 
 const app = express();
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookies());
 
 //google Auth
-const {OAuth2Client} = require('google-auth-library');
 const CLIENT_ID = '1073318607046-aoa8gbg5bpui96h3n5vv4mig3e8ce2jr.apps.googleusercontent.com'
 const client = new OAuth2Client(CLIENT_ID);
 
@@ -24,7 +25,6 @@ app.get('/login', (req,res) => {
 
 app.post('/login', (req,res) => {
     let token = req.body.token
-    
     const client = new OAuth2Client(CLIENT_ID);
     async function verify() {
         const ticket = await client.verifyIdToken({
@@ -33,7 +33,6 @@ app.post('/login', (req,res) => {
         });
         const payload = ticket.getPayload();
         const userid = payload['sub'];
-        console.log(payload)
     }
     verify().then(()=> {
         res.cookie('session-cookie', token);
@@ -43,12 +42,12 @@ app.post('/login', (req,res) => {
     
 })
 
-app.get('/profile', (req,res) => {
+app.get('/dashboard',checkAuthenticated, (req,res) => {
     let user = req.user;
-    res.render('profile',{user})
+    res.render('dashboard',{user})
 })
 
-app.get('/protectedroute', (req,res) => {
+app.get('/protectedroute', checkAuthenticated,(req,res) => {
     res.render('protectedroute')
 })
 
@@ -59,10 +58,9 @@ app.get('/logout', (req,res) => {
 
 
 function checkAuthenticated(req,res,next) {
-    let token = req.cookies('session-token');
-
+    let token = req.cookies['session-cookie'];
     let user = {};
-
+console.log(req.cookies)
     async function verify() {
   const ticket = await client.verifyIdToken({
       idToken: token,
@@ -81,7 +79,8 @@ verify()
     next()
 })
 .catch(err => {
-    req.redirect('/login')
+    console.log(err)
+    res.redirect('/login')
 })
 }
 
